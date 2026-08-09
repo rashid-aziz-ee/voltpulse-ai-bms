@@ -45,6 +45,18 @@ with st.sidebar:
     st.markdown("Configure external APIs for full Cloud integration.")
     
     gemini_key = st.text_input("Gemini API Key (For Co-Pilot)", type="password")
+    
+    st.markdown("---")
+    st.subheader("☁️ Cloud Deployment Mode")
+    run_simulator = st.checkbox("Run Internal IoT Simulator", value=False, help="Turn this ON if deploying to Streamlit Cloud where you can't run the backend terminal.")
+    if run_simulator and 'streamer_thread_started' not in st.session_state:
+        import threading
+        from src.iot_streamer import stream_iot_data
+        t = threading.Thread(target=stream_iot_data, daemon=True)
+        t.start()
+        st.session_state.streamer_thread_started = True
+        st.success("Internal Simulator Started!")
+
     st.markdown("---")
     st.subheader("✉️ Email Alert System")
     sender_email = st.text_input("Your Gmail Address")
@@ -86,7 +98,7 @@ def fetch_latest_timestamp_data():
 df = fetch_latest_timestamp_data()
 
 #st.title("⚡ NEXORA Global: VoltPulse-AI Enterprise BMS")
-st.title("⚡ 132kV Grid Station Battery Management System (BMS) - VoltPulse-AI")
+st.title("⚡Grid Station Battery Management System (BMS) - VoltPulse-AI")
 st.markdown("Cloud-connected IoT platform for 110V Grid Stations with GenAI Co-Pilot & Financial Analytics.")
 
 if df.empty or xgb_model is None or rf_model is None:
