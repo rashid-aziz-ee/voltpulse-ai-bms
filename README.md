@@ -52,5 +52,4 @@ streamlit run app.py
 ```
 *(Ensure you enter your Google Gemini API Key in the sidebar to activate the AI Co-Pilot).*
 
-## 🏆 Built for the NEXORA Global Hackathon
 **Built for Impact. Driven by AI.**
