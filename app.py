@@ -49,13 +49,18 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("☁️ Cloud Deployment Mode")
     run_simulator = st.checkbox("Run Internal IoT Simulator", value=False, help="Turn this ON if deploying to Streamlit Cloud where you can't run the backend terminal.")
-    if run_simulator and 'streamer_thread_started' not in st.session_state:
+    
+    @st.cache_resource
+    def start_simulator_thread():
         import threading
         from src.iot_streamer import stream_iot_data
         t = threading.Thread(target=stream_iot_data, daemon=True)
         t.start()
-        st.session_state.streamer_thread_started = True
-        st.success("Internal Simulator Started!")
+        return True
+
+    if run_simulator:
+        start_simulator_thread()
+        st.success("Internal Simulator is running (Global State).")
 
     st.markdown("---")
     st.subheader("✉️ Email Alert System")
