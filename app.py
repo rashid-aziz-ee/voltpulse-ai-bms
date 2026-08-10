@@ -225,7 +225,7 @@ with tab1:
                     history_df = history_df.sort_values(by="id")
                     fig = px.line(history_df, x="Timestamp", y=["Voltage_V", "Temperature_C"], 
                                   title=f"Live Sensor Timeline ({focus_cell})", markers=True, template="plotly_dark")
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True, key=f"graph_{focus_cell}")
                 else:
                     st.info("Waiting for historical data...")
             except Exception as e:
