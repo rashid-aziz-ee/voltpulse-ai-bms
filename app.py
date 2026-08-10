@@ -189,47 +189,53 @@ with tab1:
     else:
         # Detailed View
         focus_cell = st.session_state.selected_cell
-        if st.button("⬅️ Back to Main Screen", type="primary"):
-            st.session_state.selected_cell = None
-            st.rerun()
-            
-        st.subheader(f"🔎 Detailed Analysis: {focus_cell}")
-        if focus_cell in cell_data_dict:
-            c_data = cell_data_dict[focus_cell]
-            risk_level = c_data['Thermal_Risk_Pred']
-            
-            if risk_level == 0:
-                status_html = "<div class='metric-card safe-card'><h4>AI Status</h4><h2 style='color:#00ffcc'>✅ OPTIMAL</h2></div>"
-            elif risk_level == 1:
-                status_html = "<div class='metric-card warning-card'><h4>AI Status</h4><h2 style='color:#ffaa00'>⚠️ WARNING</h2></div>"
-            else:
-                status_html = "<div class='emergency-alert'><h3>🚨 CRITICAL THERMAL RUNAWAY</h3><p>Relays Isolated. Email sent to engineering.</p></div>"
+        
+        # Container to hold everything so we can explicitly destroy it to prevent UI ghosting
+        detail_container = st.empty()
+        
+        with detail_container.container():
+            if st.button("⬅️ Back to Main Screen", type="primary"):
+                detail_container.empty() # Explicitly clear the DOM to prevent Plotly ghost iframes
+                st.session_state.selected_cell = None
+                st.rerun()
                 
-            colA, colB = st.columns([2, 1])
-            with colA:
-                mc1, mc2 = st.columns(2)
-                mc1.markdown(f"<div class='metric-card safe-card'><h4>Voltage</h4><h2>{c_data['Voltage_V']:.2f} V</h2></div>", unsafe_allow_html=True)
-                mc2.markdown(f"<div class='metric-card safe-card'><h4>Predicted RUL</h4><h2>{int(c_data['RUL_Pred'])} Cycles</h2></div>", unsafe_allow_html=True)
-            with colB:
-                st.markdown(status_html, unsafe_allow_html=True)
+            st.subheader(f"🔎 Detailed Analysis: {focus_cell}")
+            if focus_cell in cell_data_dict:
+                c_data = cell_data_dict[focus_cell]
+                risk_level = c_data['Thermal_Risk_Pred']
                 
-            st.markdown("---")
-            st.subheader("📈 Historical Degradation & Telemetry")
-            try:
-                db_path = os.path.join("data", "telemetry.db")
-                conn = sqlite3.connect(db_path)
-                history_df = pd.read_sql_query(f"SELECT * FROM telemetry WHERE Cell_ID='{focus_cell}' ORDER BY id DESC LIMIT 40", conn)
-                conn.close()
-                
-                if not history_df.empty:
-                    history_df = history_df.sort_values(by="id")
-                    fig = px.line(history_df, x="Timestamp", y=["Voltage_V", "Temperature_C"], 
-                                  title=f"Live Sensor Timeline ({focus_cell})", markers=True, template="plotly_dark")
-                    st.plotly_chart(fig, use_container_width=True, key=f"graph_{focus_cell}")
+                if risk_level == 0:
+                    status_html = "<div class='metric-card safe-card'><h4>AI Status</h4><h2 style='color:#00ffcc'>✅ OPTIMAL</h2></div>"
+                elif risk_level == 1:
+                    status_html = "<div class='metric-card warning-card'><h4>AI Status</h4><h2 style='color:#ffaa00'>⚠️ WARNING</h2></div>"
                 else:
-                    st.info("Waiting for historical data...")
-            except Exception as e:
-                st.error(f"Could not load graph: {e}")
+                    status_html = "<div class='emergency-alert'><h3>🚨 CRITICAL THERMAL RUNAWAY</h3><p>Relays Isolated. Email sent to engineering.</p></div>"
+                    
+                colA, colB = st.columns([2, 1])
+                with colA:
+                    mc1, mc2 = st.columns(2)
+                    mc1.markdown(f"<div class='metric-card safe-card'><h4>Voltage</h4><h2>{c_data['Voltage_V']:.2f} V</h2></div>", unsafe_allow_html=True)
+                    mc2.markdown(f"<div class='metric-card safe-card'><h4>Predicted RUL</h4><h2>{int(c_data['RUL_Pred'])} Cycles</h2></div>", unsafe_allow_html=True)
+                with colB:
+                    st.markdown(status_html, unsafe_allow_html=True)
+                    
+                st.markdown("---")
+                st.subheader("📈 Historical Degradation & Telemetry")
+                try:
+                    db_path = os.path.join("data", "telemetry.db")
+                    conn = sqlite3.connect(db_path)
+                    history_df = pd.read_sql_query(f"SELECT * FROM telemetry WHERE Cell_ID='{focus_cell}' ORDER BY id DESC LIMIT 40", conn)
+                    conn.close()
+                    
+                    if not history_df.empty:
+                        history_df = history_df.sort_values(by="id")
+                        fig = px.line(history_df, x="Timestamp", y=["Voltage_V", "Temperature_C"], 
+                                      title=f"Live Sensor Timeline ({focus_cell})", markers=True, template="plotly_dark")
+                        st.plotly_chart(fig, use_container_width=True, key=f"graph_{focus_cell}")
+                    else:
+                        st.info("Waiting for historical data...")
+                except Exception as e:
+                    st.error(f"Could not load graph: {e}")
 
 # ==========================================
 # TAB 2: BMS AI CO-PILOT
