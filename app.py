@@ -10,6 +10,11 @@ import time
 import google.generativeai as genai
 import src.alert_system as alert_system
 
+try:
+    from streamlit_autorefresh import st_autorefresh
+except ImportError:
+    st_autorefresh = None
+
 st.set_page_config(page_title="VoltPulse-AI Cloud BMS", page_icon="🔋", layout="wide")
 
 # CSS Styling
@@ -354,5 +359,8 @@ with tab3:
 # Auto-Refresh Logic
 # -------------------------------------------------------------------
 if st.session_state.sim_running:
-    time.sleep(2.0)
-    st.rerun()
+    if st_autorefresh:
+        st_autorefresh(interval=2000, key="data_refresh")
+    else:
+        time.sleep(2.0)
+        st.rerun()
