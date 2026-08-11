@@ -126,6 +126,8 @@ if 'alerted_cells' not in st.session_state:
     st.session_state.alerted_cells = []
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'ai_generating' not in st.session_state:
+    st.session_state.ai_generating = False
 
 col1, col2 = st.columns([1, 5])
 with col1:
@@ -263,6 +265,7 @@ with tab2:
                 
         user_input = st.chat_input("Ask about weak cells, thermal events, or grid health...")
         if user_input:
+            st.session_state.ai_generating = True
             st.session_state.chat_history.append({"role": "user", "content": user_input})
             with st.chat_message("user"):
                 st.markdown(user_input)
@@ -328,6 +331,10 @@ User Question: {user_input}
                             st.error(error_msg)
                     except Exception as e:
                         st.error(f"Critical Error: {e}")
+            
+            # Restart auto-refresh after generation completes
+            st.session_state.ai_generating = False
+            st.rerun()
 
 # ==========================================
 # TAB 3: FINANCIAL & ROI IMPACT
@@ -363,7 +370,7 @@ with tab3:
 # -------------------------------------------------------------------
 # Auto-Refresh Logic
 # -------------------------------------------------------------------
-if st.session_state.sim_running:
+if st.session_state.sim_running and not st.session_state.ai_generating:
     if st_autorefresh:
         st_autorefresh(interval=2000, key="data_refresh")
     else:
