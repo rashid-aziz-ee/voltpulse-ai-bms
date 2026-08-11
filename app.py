@@ -123,7 +123,7 @@ if 'sim_running' not in st.session_state:
 if 'selected_cell' not in st.session_state:
     st.session_state.selected_cell = None
 if 'alerted_cells' not in st.session_state:
-    st.session_state.alerted_cells = set()
+    st.session_state.alerted_cells = []
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
@@ -150,14 +150,19 @@ cell_data_dict = current_pack_df.set_index('Cell_ID').to_dict('index')
 # Check for Critical Cells and Alert
 for cell_id, c_data in cell_data_dict.items():
     if c_data['Thermal_Risk_Pred'] == 2 and cell_id not in st.session_state.alerted_cells:
-        # Trigger Email Alert
-        success = alert_system.send_alert(
-            sender_email, app_password, target_email, 
-            cell_id, c_data['Voltage_V'], c_data['Temperature_C'], 2
-        )
-        if success:
-            st.toast(f"📧 Emergency email dispatched to {target_email} for {cell_id}!")
-        st.session_state.alerted_cells.add(cell_id)
+        # 1. Instantly update state to prevent duplicate triggers (Spam fix)
+        st.session_state.alerted_cells = st.session_state.alerted_cells + [cell_id]
+        
+        # 2. Spawn a background thread so the UI doesn't freeze (Heavy load / Donkey fix)
+        if sender_email and app_password:
+            import threading
+            t = threading.Thread(
+                target=alert_system.send_alert,
+                args=(sender_email, app_password, target_email, cell_id, c_data['Voltage_V'], c_data['Temperature_C'], 2),
+                daemon=True
+            )
+            t.start()
+            st.toast(f"📧 Emergency email dispatching to {target_email} for {cell_id}!")
 
 st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["📊 IoT Control Room", "🤖 BMS AI Co-Pilot", "💰 Business & ROI Impact"])
