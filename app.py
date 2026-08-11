@@ -284,11 +284,19 @@ with tab2:
                         avg_rul = np.mean([d['RUL_Pred'] for d in cell_data_dict.values()]) if cell_data_dict else 0
                         health_score = max(0.0, 100.0 - (((len(criticals)*2 + len(warnings)*1) / 55) * 100))
                         
-                        # Build conversational memory for Gemini (excluding the latest message just appended)
+                        # Build safe conversational memory for Gemini
                         gemini_history = []
+                        last_role = None
                         for msg in st.session_state.chat_history[:-1]:
                             role = "model" if msg["role"] == "assistant" else "user"
-                            gemini_history.append({"role": role, "parts": [msg["content"]]})
+                            # Prevent consecutive identical roles which crash the Gemini API
+                            if role != last_role:
+                                gemini_history.append({"role": role, "parts": [msg["content"]]})
+                                last_role = role
+                        
+                        # Gemini API strictly requires history to end with 'model' before sending a new 'user' message
+                        if gemini_history and gemini_history[-1]["role"] == "user":
+                            gemini_history.pop()
                         
                         enhanced_prompt = f"""
 [LIVE GRID TELEMETRY CONTEXT]
@@ -328,9 +336,11 @@ User Question: {user_input}
                                 avail_models = f"Could not list models: {ex}"
                                 
                             error_msg = f"Failed to generate response. Last Error: {last_error}\n\n**Available Models for your API Key:** {avail_models}"
-                            st.error(error_msg)
+                            st.markdown(f"❌ **Error:** {error_msg}")
+                            st.session_state.chat_history.append({"role": "assistant", "content": f"❌ **Error:** {error_msg}"})
                     except Exception as e:
-                        st.error(f"Critical Error: {e}")
+                        st.markdown(f"❌ **Critical Error:** {e}")
+                        st.session_state.chat_history.append({"role": "assistant", "content": f"❌ **Critical Error:** {e}"})
             
             # Restart auto-refresh after generation completes
             st.session_state.ai_generating = False
